@@ -1,7 +1,5 @@
 const fs = require('fs');
 const ytdl = require('ytdl-core');
-const ffmpegPath = require('ffmpeg-static');
-const ffmpeg = require('fluent-ffmpeg');
 const yargs = require('yargs');
 const path = require('path');
 
@@ -21,9 +19,6 @@ const argv = yargs
     default: 'output.mp3',
   })
   .argv;
-
-// Set the FFmpeg binary path
-ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Extract provided arguments
 const videoURL = argv.url;
@@ -46,25 +41,17 @@ console.log('URL provided:', videoURL);
 
     console.log('Beginning conversion...');
 
-    // Extract the directory path from the output filename
-    const outputDir = path.dirname(outputFilename);
+    // Create a writable stream for the output MP3 file
+    const outputStream = fs.createWriteStream(outputFilename);
 
-    // Create output directory if it doesn't exist
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
+    // Pipe the audio stream to the output file stream
+    stream.pipe(outputStream);
 
-    // Use fluent-ffmpeg to convert the audio stream to an MP3 file
-    ffmpeg(stream)
-      .setFfmpegPath(ffmpegPath) // Set the FFmpeg binary path
-      .audioCodec('libmp3lame')
-      .save(outputFilename)
-      .on('end', () => {
-        console.log('Conversion to MP3 complete!');
-      })
-      .on('error', (err) => {
-        console.error('Error during conversion:', err);
-      });
+    // Handle the end of the audio stream
+    outputStream.on('finish', () => {
+      console.log('Conversion to MP3 complete!');
+    });
+
   } catch (error) {
     console.error('Error:', error);
   }
